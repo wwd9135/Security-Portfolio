@@ -1,0 +1,39 @@
+let suspiciousParents = dynamic([
+    "chrome.exe", "msedge.exe", "firefox.exe",
+    "winword.exe", "excel.exe", "powerpnt.exe", "onenote.exe",
+    "outlook.exe", "teams.exe", "explorer.exe"
+]);
+
+let interpreters = dynamic([
+    "cmd.exe", "powershell.exe", "pwsh.exe",
+    "wscript.exe", "cscript.exe",
+    "mshta.exe", "rundll32.exe", "regsvr32.exe",
+    "python.exe", "perl.exe", "ruby.exe"
+]);
+
+DeviceProcessEvents
+| where Timestamp > ago(7d)
+| where FileName in (interpreters)
+| extend Parent = tostring(ParentProcessName)
+| extend Cmd = tostring(ProcessCommandLine)
+| where 
+    // Suspicious parent process
+    Parent in (suspiciousParents)
+    or Cmd has_any ("-enc", "encodedcommand", "download", "invoke-webrequest", "iwr", "curl", "wget")
+    or Cmd matches regex @"(?i)(http|https|ftp)://"
+    or Cmd matches regex @"(?i)(frombase64string|base64)"
+    or Cmd matches regex @"(?i)(new-object\s+net\.webclient)"
+    or Cmd matches regex @"(?i)(invoke-expression|iex)"
+    or Cmd matches regex @"(?i)(shellcode|reflection|add-type)"
+    or Cmd matches regex @"(?i)(/c\s+|/r\s+)"
+| project
+    Timestamp,
+    DeviceName,
+    FileName,
+    Parent,
+    Cmd,
+    InitiatingProcessFileName,
+    InitiatingProcessCommandLine,
+    AccountName,
+    ReportId
+| order by Timestamp desc

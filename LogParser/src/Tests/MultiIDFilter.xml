@@ -1,0 +1,14 @@
+<Events>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System><EventID>1000</EventID><TimeCreated SystemTime='2026-02-05T08:00:00Z'/></System>
+    <EventData><Data>Success</Data></EventData>
+  </Event>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System><EventID>3000</EventID><TimeCreated SystemTime='2026-02-05T08:10:00Z'/></System>
+    <EventData><Data>Informational log - should be filtered out</Data></EventData>
+  </Event>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System><EventID>4000</EventID><TimeCreated SystemTime='2026-02-05T08:20:00Z'/></System>
+    <EventData><Data>Warning log - should be filtered out</Data></EventData>
+  </Event>
+</Events>

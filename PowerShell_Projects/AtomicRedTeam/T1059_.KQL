@@ -1,0 +1,5 @@
+DeviceProcessEvents
+| where FileName == "AutoIt3.exe"
+| where InitiatingProcessFileName == "powershell.exe"
+| project TimeGenerated, DeviceName, FileName, ProcessCommandLine, 
+          InitiatingProcessFileName, InitiatingProcessCommandLine

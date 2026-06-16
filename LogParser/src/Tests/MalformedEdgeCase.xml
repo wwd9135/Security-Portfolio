@@ -1,0 +1,16 @@
+<Events>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System>
+      <EventID>9999</EventID>
+      <TimeCreated SystemTime='2026-02-09T14:00:00Z'/>
+    </System>
+    <EventData>
+      <Data></Data> </EventData>
+  </Event>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System>
+      <EventID>1000</EventID>
+      <TimeCreated SystemTime='2026-02-09T14:05:00.123456789Z'/> </System>
+    <EventData><Data>Normal successfully</Data></EventData>
+  </Event>
+</Events>

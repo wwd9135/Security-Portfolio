@@ -1,0 +1,4 @@
+2026-01-08 16:01:49,884 - WARNING - Patterns found in file test.txt: ['+44 07415776648\n', '+4407415776648\n', '+44 07415 776648\n', 'wwd9135@gmail.com\n']
+2026-01-08 16:02:03,936 - WARNING - Patterns found in file test.txt: ['+44 07415776648\n', '+4407415776648\n', '+44 07415 776648\n', 'wwd9135@gmail.com\n']
+2026-01-08 16:02:41,952 - WARNING - Patterns found in file test.txt: ['+44 07415776648\n', '+4407415776648\n', '+44 07415 776648\n', 'wwd9135@gmail.com\n']
+2026-01-08 16:02:41,952 - INFO - Analysis complete successfully.

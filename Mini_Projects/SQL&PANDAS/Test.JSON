@@ -1,0 +1,41 @@
+{
+  "date": "1774540860",
+  "related": null,
+  "category": null,
+  "cve_reference": null,
+  "severity_description": null,
+  "active": false,
+  "author": "astana",
+  "description": null,
+  "event_generation_strategy": null,
+  "falsepositives": null,
+  "fields": null,
+  "id": "generated-by-event-processing-SURI-3000513",
+  "level": null,
+  "logsource": {
+    "category": "suricata_corelight",
+    "product": null,
+    "service": null,
+    "__typename": "MetadataLogSource"
+  },
+  "mitre_mappings": null,
+  "references": null,
+  "severity": 6,
+  "severity_info": {
+    "custom_severity": null,
+    "custom_severity_enabled": false,
+    "default_severity": 6,
+    "last_updated_by_user_alias": null,
+    "last_updated_by_username": null,
+    "last_updated_timestamp": null,
+    "__typename": "SeverityInfo"
+  },
+  "status": null,
+  "tags": null,
+  "tenant_alert": "0812047d0a1a55d0caf0b089aadbff97",
+  "title": "CORELIGHT BRUTE Possible Kerberos Brute Force Attempt (TCP)",
+  "rule": "alert tcp-pkt $HOME_NET 88 -> any any (msg:\"CORELIGHT BRUTE Possible Kerberos Brute Force Attempt (TCP)\"; flow:established,to_client; content:\"|a1 03 02 01 1e|\"; content:\"|a6 03 02 01 18|\"; content:\"krbtgt\"; fast_pattern; threshold:type both, seconds 600, count 15, track by_src; reference:url,github.com/ropnop/kerbrute; classtype:attempted-user; sid:3000513; rev:5; metadata:created_at 2026_03_17, mitre_tactic_id TA0006, mitre_technique_id T1110.001;)",
+  "content_doc": null,
+  "custom_search_rule": null,
+  "__typename": "AlertMetadata"
+}

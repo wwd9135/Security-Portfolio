@@ -1,0 +1,24 @@
+2026-01-14 15:44:35,435 - INFO - Program started
+2026-01-14 15:44:35,435 - DEBUG - Initializing CLI and Subnet modules
+2026-01-14 15:44:35,435 - DEBUG - Running CLI.instantiate()
+2026-01-14 15:44:35,435 - DEBUG - Parsed subnet dictionary: {'Marketing': 5553, 'HR': 21, 'Buisness': 3}
+2026-01-14 15:44:35,435 - DEBUG - Subnets returned: {'Marketing': 5553, 'HR': 21, 'Buisness': 3}
+2026-01-14 15:44:35,435 - DEBUG - Creating subnet hosts
+2026-01-14 15:44:35,435 - DEBUG - Subnet hosts: {'Marketing': 8190, 'HR': 30, 'Buisness': 6}
+2026-01-14 15:44:35,435 - DEBUG - Running IP addressing
+2026-01-14 15:44:35,450 - INFO - Processing complete
+2026-01-14 15:44:35,450 - DEBUG - Final output: {'Subnet Name': 'Marketing', 'Total Host Count': 8190, 'Network address': '192.168.0.1', 'Broadcast address': '192.168.31.255', 'Last usable host': '192.168.31.255', 'Subnet mask': '255.255.0.0'}
+2026-01-14 15:44:35,450 - INFO - Program ended
+-------------------------
+2026-01-14 15:44:36,984 - INFO - Program started
+2026-01-14 15:44:36,984 - DEBUG - Initializing CLI and Subnet modules
+2026-01-14 15:44:36,984 - DEBUG - Running CLI.instantiate()
+2026-01-14 15:44:36,993 - DEBUG - Parsed subnet dictionary: {'Marketing': 5553, 'HR': 21, 'Buisness': 3}
+2026-01-14 15:44:36,993 - DEBUG - Subnets returned: {'Marketing': 5553, 'HR': 21, 'Buisness': 3}
+2026-01-14 15:44:36,993 - DEBUG - Creating subnet hosts
+2026-01-14 15:44:36,993 - DEBUG - Subnet hosts: {'Marketing': 8190, 'HR': 30, 'Buisness': 6}
+2026-01-14 15:44:36,993 - DEBUG - Running IP addressing
+2026-01-14 15:44:36,993 - INFO - Processing complete
+2026-01-14 15:44:36,993 - DEBUG - Final output: {'Subnet Name': 'Marketing', 'Total Host Count': 8190, 'Network address': '192.168.0.1', 'Broadcast address': '192.168.31.255', 'Last usable host': '192.168.31.255', 'Subnet mask': '255.255.0.0'}
+2026-01-14 15:44:36,993 - INFO - Program ended
+-------------------------

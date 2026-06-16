@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "LogParser"
+version = "1.0.0"
+description = "CLi log parsing tool built for windows event logs."
+authors = [{ name = "William Richardson" }]
+readme = "ReadME.md"
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]

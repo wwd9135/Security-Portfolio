@@ -1,0 +1,49 @@
+# This KQL query is designed to pull a plethora of data to help spot patterns in devices missing patches for 2 or more months.
+
+// 1. Grab the latest AV Engine/Signature data from the TVM Info table
+let AvStatus = DeviceTvmInfoGathering
+| extend Fields = parse_json(AdditionalFields)
+| summarize arg_max(Timestamp, *) by DeviceId
+| project DeviceId, 
+    AvEngineVersion = tostring(Fields.AvEngineVersion), 
+    AvSignatureVersion = tostring(Fields.AvSignatureVersion),
+    AvPlatformVersion = tostring(Fields.AvPlatformVersion);
+// 2. Identify the patching gaps
+let PatchGaps = DeviceTvmSoftwareVulnerabilities
+| where DeviceName startswith "lap"
+| where OSPlatform == "Windows11" and SoftwareName == "windows_11"
+| where isnotempty(RecommendedSecurityUpdate)
+| summarize 
+    MissingPatchCount = dcount(RecommendedSecurityUpdate), 
+    MissingKBs = make_set(RecommendedSecurityUpdate) 
+    by DeviceId, DeviceName
+| where MissingPatchCount >= 2;
+// 3. Join everything together
+PatchGaps
+| join kind=inner (
+    DeviceNetworkInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, IPAddresses, LastSeen = Timestamp
+) on DeviceId
+| join kind=inner (
+    DeviceInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, LoggedOnUsers, OSVersion, OnboardingStatus, SensorHealthState
+) on DeviceId
+| join kind=leftouter AvStatus on DeviceId // Left join so we don't drop devices missing AV data
+// 4. Final Formatting
+| project 
+    DeviceName,
+    DeviceId,
+    MissingPatchCount,
+    MissingKBs,
+    IPAddresses,
+    LoggedOnUsers,
+    LastSeen,
+    DaysSinceSeen = datetime_diff('day', now(), LastSeen),
+    SensorHealthState,
+    OnboardingStatus,
+    AvEngineVersion,
+    AvSignatureVersion,
+    OSVersion
+| sort by MissingPatchCount desc

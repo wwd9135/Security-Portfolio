@@ -1,0 +1,14 @@
+# Risky sign in hunt, good for gathering 
+SigninLogs
+| where RiskState == "atRisk" or RiskLevelDuringSignIn != "none"
+| project TimeGenerated, UserPrincipalName, Location, RiskLevelDuringSignIn, RiskState, ConditionalAccessStatus
+| sort by TimeGenerated desc
+
+# Device LogonType
+DeviceLogonEvents
+| where LogonType == "RemoteInteractive"
+| where TimeGenerated > ago(1d)
+| project TimeGenerated, RemoteIP, RemoteIPType, ActionType, LogonType, AccountDomain, AccountName
+| sort by TimeGenerated desc
+
+###

@@ -1,0 +1,14 @@
+<Events>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System><EventID>1000</EventID><TimeCreated SystemTime='2025-12-31T23:59:59Z'/></System>
+    <EventData><Data>Old Year Log</Data></EventData>
+  </Event>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System><EventID>1000</EventID><TimeCreated SystemTime='2026-01-01T00:00:01Z'/></System>
+    <EventData><Data>New Year Log</Data></EventData>
+  </Event>
+  <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'>
+    <System><EventID>2000</EventID><TimeCreated SystemTime='2026-02-09T12:00:00Z'/></System>
+    <EventData><Data>Today Log</Data></EventData>
+  </Event>
+</Events>
