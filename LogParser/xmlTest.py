@@ -10,7 +10,7 @@ def test_xml_logic_suite():
 
     # --- Test Case 1: Basic Parsing (BasicTest.xml) ---
     print("Test 1: Basic XML Parsing...")
-    res1 = parser.parse("Tests/MultiIDFilter.xml")
+    res1 = parser.parse("src/Tests/MultiIDFilter.xml")
     assert res1["summary"]["total"] == 3
     print(" Passed: Basic parsing and record counting.")
     
@@ -18,7 +18,7 @@ def test_xml_logic_suite():
     print("Test 2: Event ID Filtering...")
     # Reset parser state for new test
     parser = LogParser() 
-    res2 = parser.parse("Tests/MultiIDFilter.xml", target_ids=[1000])
+    res2 = parser.parse("src/Tests/MultiIDFilter.xml", target_ids=[1000])
     assert res2["summary"]["total"] == 1
     assert res2["data"][0]["event_id"] == 1000
     # Ensure ID 3000 and 4000 were dropped
@@ -29,7 +29,7 @@ def test_xml_logic_suite():
     print("Test 3: Timestamp Filtering...")
     parser = LogParser()
     # Filter for logs ONLY in 2026
-    res3 = parser.parse("Tests/TimeRange.xml", since_str="2026-01-01 00:00")
+    res3 = parser.parse("src/Tests/TimeRange.xml", since_str="2026-01-01 00:00")
     assert res3["summary"]["total"] == 2
     # Verify the oldest log (Dec 2025) was excluded
     for entry in res3["data"]:

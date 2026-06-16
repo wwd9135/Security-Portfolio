@@ -1,64 +1,71 @@
 # Windows Event Log Parser
 
-A Python-based utility for parsing, normalizing, and filtering Windows Event Logs exported in XML format. This tool converts complex, nested XML data into structured dictionaries and provides granular filtering based on timestamps and Event IDs.
+A command-line tool for parsing, normalising, and filtering Windows Event Logs exported in XML format. Extracts event records from Microsoft's native XML schema and produces clean, tabular terminal output — with optional filtering by Event ID and timestamp cutoff.
 
 ## Features
 
-- **Namespace Normalization:** Automatically handles Microsoft Windows Event XML namespaces to extract clean data.
-- **Timestamp Filtering:** Filter logs using a specific cutoff date and time (ISO 8601 format).
-- **Event ID Filtering:** Scan for single or multiple specific Event IDs simultaneously.
-- **Robustness Layer:** Handles common XML encoding issues, hidden Byte Order Marks (BOM), and empty data elements.
-- **Architecture:** Decoupled design separating CLI presentation logic from core parsing logic.
+- **Event ID filtering** — Target one or multiple IDs in a single run (`--ids 4624 4625`)
+- **Timestamp filtering** — Drop events older than a specified cutoff (`--since "YYYY-MM-DD HH:MM"`)
+- **Namespace normalisation** — Handles Microsoft Windows Event XML namespaces transparently
+- **Robustness** — Tolerates BOM characters, empty `<Data/>` elements, and high-precision timestamps
+- **Decoupled design** — CLI logic (`CliMod.py`) is fully separated from parsing logic (`Parser.py`)
 
 ## Project Structure
 
-- `_main_.py`: The application orchestrator and entry point.
-- `src/Cli.py`: Handles argument parsing and terminal output formatting.
-- `src/Parser.py`: Contains the core logic for XML processing and data normalization.
-- `test_parser.py`: Suite for validating parser logic against baseline and edge-case XML files.
-- `main.log`: Persistent log file tracking application execution and errors.
-
-## Installation
-
-1. **Clone the repository:**
-   ```bash
-   git clone [https://github.com/yourusername/LogParser.git](https://github.com/yourusername/LogParser.git)
-   cd LogParser
-2. **Configure a virtual environment:**
-python -m venv venv
-- Windows:
-.\venv\Scripts\activate
-- Linux/macOS:
-source venv/bin/activate
+```
+LogParser/
+├── _main_.py              # Entry point — coordinates CLI → parser → output
+├── xmlTest.py             # Test suite covering all four XML scenarios
+├── pyproject.toml
+└── src/
+    ├── CliMod.py          # Argument parsing and formatted terminal output
+    ├── Parser.py          # XML parsing, event filtering, and data normalisation
+    ├── __init__.py
+    └── Tests/
+        ├── MyTestLog.xml          # Baseline event log
+        ├── MultiIDFilter.xml      # Multi-ID filter scenario
+        ├── TimeRange.xml          # Timestamp cutoff scenario
+        └── MalformedEdgeCase.xml  # Malformed XML / empty field scenario
+```
 
 ## Usage
-The tool is executed through _main_.py. It requires a path to an XML log file.
 
-**Basic Command:**
+Run from the `LogParser/` directory.
 
-- python _main_.py path/to/log.xml
+**Basic parse:**
+```
+python _main_.py src/Tests/MyTestLog.xml
+```
 
-**Filter by Event IDs:**
+**Filter by Event ID(s):**
+```
+python _main_.py src/Tests/MyTestLog.xml --ids 4624 4625
+```
 
-- Use the --ids flag followed by one or more integers. Run:
-- python _main_.py path/to/log.xml --ids 1000 2000
+**Filter by timestamp cutoff:**
+```
+python _main_.py src/Tests/MyTestLog.xml --since "2026-01-21 14:30"
+```
 
-**Filter by Date:**
+**Combine filters:**
+```
+python _main_.py src/Tests/MyTestLog.xml --ids 4624 --since "2026-01-21 14:30"
+```
 
-- Use the --since flag with the format "YYYY-MM-DD HH:MM". Run:
-    -python _main_.py path/to/log.xml --since "2026-01-21 14:30"
+## Testing
 
-**Testing:**
+Run the included test suite from the `LogParser/` directory:
 
-The included test suite validates the parser against four specific scenarios: 
-- baseline parsing
-- ID filtering accuracy
+```
+python xmlTest.py
+```
+
+Covers four scenarios:
+- Baseline parsing and record counting
+- Event ID filtering accuracy
 - Chronological cutoff logic
-- Malformed XML handling. 
+- Malformed XML and empty field normalisation
 
-python test_parser.py
+## Logging
 
-**Logging:**
-
-- The application logs debug and error information to main.log.
-- This includes validation of the virtual environment status, file path resolution, and XML parsing exceptions.
+Execution events, file path validation, and parse errors are written to `main.log`.
