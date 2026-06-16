@@ -1,0 +1,143 @@
+// ============================================================
+// Alert & Incident Monitoring — Microsoft Sentinel
+// Platforms: Sentinel (Log Analytics), Defender for Endpoint
+// ============================================================
+
+// Alert volume by name and severity over the last 7 days
+SecurityAlert
+| where TimeGenerated > ago(7d)
+| summarize AlertCount = count() by AlertName, AlertSeverity
+| sort by AlertCount desc
+
+// -------------------------------------------------------
+// Suspicious PowerShell — encoded command arguments
+// -------------------------------------------------------
+DeviceProcessEvents
+| where FileName == "powershell.exe"
+| where ProcessCommandLine has_any ("-EncodedCommand", "-enc", "-e ")
+| project TimeGenerated, DeviceName, AccountName, ProcessCommandLine
+| sort by TimeGenerated desc
+
+// -------------------------------------------------------
+// Identity — new user account creation (last 30 days)
+// -------------------------------------------------------
+AuditLogs
+| where TimeGenerated > ago(30d)
+| where OperationName contains "Adding new user"
+| project TimeGenerated, Category, OperationName, Result, ResultDescription
+| sort by TimeGenerated desc
+
+// -------------------------------------------------------
+// Incident backlog — open incidents by severity
+// -------------------------------------------------------
+SecurityIncident
+| where Status != "Closed"
+| summarize Count = count() by Severity
+| sort by Count desc
+
+// -------------------------------------------------------
+// Network — connection to default Metasploit listener port
+// -------------------------------------------------------
+DeviceNetworkEvents
+| where TimeGenerated > ago(1h)
+| where RemotePort == 4444
+| project TimeGenerated, DeviceName, RemoteIP, RemotePort, InitiatingProcessFileName
+| sort by TimeGenerated desc
+
+// -------------------------------------------------------
+// Audit — successful delete operations in Azure (last 7 days)
+// -------------------------------------------------------
+AzureActivity
+| where TimeGenerated > ago(7d)
+| where OperationNameValue contains "delete"
+| where ActivityStatusValue == "Success"
+| project Caller, CallerIpAddress, Level, TimeGenerated, Resource, ResourceGroup
+
+// -------------------------------------------------------
+// Identity — new user created outside business hours (09:00–17:00)
+// -------------------------------------------------------
+AuditLogs
+| where TimeGenerated > ago(30d)
+| where datetime_part("hour", TimeGenerated) !between (9 .. 17)
+| where OperationName contains "Add user"
+| project TimeGenerated, Identity, OperationName, Result
+
+// -------------------------------------------------------
+// Brute force — 5+ distinct accounts targeted from one IP in an hour
+// -------------------------------------------------------
+SigninLogs
+| summarize AccountsAttempted = dcount(UserPrincipalName)
+    by IPAddress, bin(TimeGenerated, 1h)
+| where AccountsAttempted > 5
+
+// -------------------------------------------------------
+// Brute force — 100+ failed logons from one IP in a day (Security Event)
+// -------------------------------------------------------
+SecurityEvent
+| where EventID == 4625
+| summarize AccountsAttempted = dcount(UserPrincipalName)
+    by IpAddress, bin(TimeGenerated, 1d)
+| where AccountsAttempted > 100
+
+// -------------------------------------------------------
+// Brute force — 100+ failed logons targeting one device in a day
+// -------------------------------------------------------
+SecurityEvent
+| where EventID == 4625
+| summarize FailedAttempts = count()
+    by Computer, bin(TimeGenerated, 1d)
+| where FailedAttempts > 100
+
+// -------------------------------------------------------
+// Incident enrichment — open high-severity alerts with host entity extraction
+// -------------------------------------------------------
+SecurityIncident
+| mv-expand AlertIds to typeof(string)
+| join kind=inner (
+    SecurityAlert
+    | where AlertSeverity == "High"
+    | where Status != "Closed"
+    | project SystemAlertId, Entities
+) on $left.AlertIds == $right.SystemAlertId
+| extend E = parse_json(Entities)
+| mv-expand E
+| where tostring(E.Type) =~ "host"
+| extend HostName = coalesce(tostring(E.HostName), tostring(E.FQDN), tostring(E.Name))
+| where isnotempty(HostName)
+
+// -------------------------------------------------------
+// SLA — mean time to resolve high-severity incidents (last 90 days)
+// -------------------------------------------------------
+SecurityIncident
+| where Severity == "High"
+| where TimeGenerated > ago(90d)
+| extend duration = datetime_diff('minute', ClosedTime, CreatedTime)
+| summarize avg(duration)
+
+// -------------------------------------------------------
+// Identity — successful sign-ins from outside GB/US (last 48 hours)
+// -------------------------------------------------------
+SigninLogs
+| where Location !in ('GB', 'US')
+| where TimeGenerated > ago(2d)
+| where ResultType == 0
+| project ResultType, UserPrincipalName, Location, TimeGenerated, Status
+
+// -------------------------------------------------------
+// Correlation — SignIn + AuditLog join on CorrelationId
+// -------------------------------------------------------
+SigninLogs
+| where TimeGenerated > ago(24h)
+| project SignInTime = TimeGenerated,
+          UserPrincipalName,
+          IPAddress,
+          CorrelationId
+| join kind=inner (
+    AuditLogs
+    | where TimeGenerated > ago(24h)
+    | project AuditTime = TimeGenerated,
+              OperationName,
+              InitiatedBy = tostring(InitiatedBy.user.userPrincipalName),
+              CorrelationId
+) on CorrelationId
+| order by SignInTime desc

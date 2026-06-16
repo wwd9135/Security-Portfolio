@@ -1,0 +1,21 @@
+// ============================================================
+// Risky Sign-In Detection — Microsoft Sentinel / Entra ID
+// Platform: Sentinel (SigninLogs), Defender for Endpoint
+// ============================================================
+
+// -------------------------------------------------------
+// Identity risk — users currently at-risk or flagged during sign-in
+// -------------------------------------------------------
+SigninLogs
+| where RiskState == "atRisk" or RiskLevelDuringSignIn != "none"
+| project TimeGenerated, UserPrincipalName, Location, RiskLevelDuringSignIn, RiskState, ConditionalAccessStatus
+| sort by TimeGenerated desc
+
+// -------------------------------------------------------
+// Lateral movement indicator — remote interactive (RDP) logons in last 24 hours
+// -------------------------------------------------------
+DeviceLogonEvents
+| where LogonType == "RemoteInteractive"
+| where TimeGenerated > ago(1d)
+| project TimeGenerated, RemoteIP, RemoteIPType, ActionType, LogonType, AccountDomain, AccountName
+| sort by TimeGenerated desc

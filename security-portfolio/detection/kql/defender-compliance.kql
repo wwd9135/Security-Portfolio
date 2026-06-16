@@ -1,0 +1,136 @@
+// ============================================================
+// Defender for Endpoint — Device Compliance & Patch Gap Queries
+// Platform: Microsoft Defender for Endpoint (Advanced Hunting)
+// ============================================================
+// SANITIZATION: 25 real device hostnames replaced with LAPTOP-001..LAPTOP-025
+// The `startswith "lap"` prefix filter has been updated to match the
+// generic LAPTOP- naming used in these examples.
+// ============================================================
+
+// -------------------------------------------------------
+// Query 1 — Get latest IP addresses for all managed devices
+// -------------------------------------------------------
+DeviceNetworkInfo
+| summarize arg_max(Timestamp, IPAddresses) by DeviceName
+| project DeviceName, IPAddresses
+
+// -------------------------------------------------------
+// Query 2 — Patch compliance check for a specific device list
+// Flags devices missing 2 or more recommended security updates (Windows 11)
+// -------------------------------------------------------
+DeviceTvmSoftwareVulnerabilities
+| where DeviceName has_any (
+    "LAPTOP-001","LAPTOP-002","LAPTOP-003","LAPTOP-004","LAPTOP-005",
+    "LAPTOP-006","LAPTOP-007","LAPTOP-008","LAPTOP-009","LAPTOP-010",
+    "LAPTOP-011","LAPTOP-012","LAPTOP-013","LAPTOP-014","LAPTOP-015",
+    "LAPTOP-016","LAPTOP-017","LAPTOP-018","LAPTOP-019","LAPTOP-020",
+    "LAPTOP-021","LAPTOP-022","LAPTOP-023","LAPTOP-024","LAPTOP-025"
+    )
+| where OSPlatform == "Windows11" and SoftwareName == "windows_11"
+| where isnotempty(RecommendedSecurityUpdate)
+| summarize
+    MissingPatchCount = dcount(RecommendedSecurityUpdate),
+    MissingKBs        = make_set(RecommendedSecurityUpdate)
+    by DeviceId, DeviceName
+| where MissingPatchCount >= 2
+| join kind=inner (
+    DeviceNetworkInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, IPAddresses, Timestamp
+) on DeviceId
+| project DeviceName, MissingPatchCount, MissingKBs, IPAddresses, LastSeen = Timestamp, DeviceId
+| sort by MissingPatchCount desc
+
+// -------------------------------------------------------
+// Query 3 — Extended patch view: logged-on users + days since last seen
+// -------------------------------------------------------
+DeviceTvmSoftwareVulnerabilities
+| where DeviceName has_any (
+    "LAPTOP-001","LAPTOP-002","LAPTOP-003","LAPTOP-004","LAPTOP-005",
+    "LAPTOP-006","LAPTOP-007","LAPTOP-008","LAPTOP-009","LAPTOP-010",
+    "LAPTOP-011","LAPTOP-012","LAPTOP-013","LAPTOP-014","LAPTOP-015",
+    "LAPTOP-016","LAPTOP-017","LAPTOP-018","LAPTOP-019","LAPTOP-020",
+    "LAPTOP-021","LAPTOP-022","LAPTOP-023","LAPTOP-024","LAPTOP-025"
+    )
+| where OSPlatform == "Windows11" and SoftwareName == "windows_11"
+| where isnotempty(RecommendedSecurityUpdate)
+| summarize
+    MissingPatchCount = dcount(RecommendedSecurityUpdate),
+    MissingKBs        = make_set(RecommendedSecurityUpdate)
+    by DeviceId, DeviceName
+| where MissingPatchCount >= 2
+| join kind=inner (
+    DeviceNetworkInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, IPAddresses, LastSeen = Timestamp
+) on DeviceId
+| join kind=inner (
+    DeviceInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, LoggedOnUsers
+) on DeviceId
+| project
+    DeviceName,
+    DeviceId,
+    MissingPatchCount,
+    MissingKBs,
+    IPAddresses,
+    LoggedOnUsers,
+    LastSeen
+| sort by MissingPatchCount desc
+| extend DaysSinceSeen = datetime_diff('day', now(), LastSeen)
+
+// -------------------------------------------------------
+// Query 4 — Full fleet compliance check (Windows 11, all laptops)
+// Joins patch gaps, network info, device health, and AV status.
+// Replace the `startswith "LAPTOP-"` filter with your naming convention.
+// -------------------------------------------------------
+
+// 1. Latest AV engine / signature versions
+let AvStatus = DeviceTvmInfoGathering
+| extend Fields = parse_json(AdditionalFields)
+| summarize arg_max(Timestamp, *) by DeviceId
+| project DeviceId,
+    AvEngineVersion   = tostring(Fields.AvEngineVersion),
+    AvSignatureVersion = tostring(Fields.AvSignatureVersion),
+    AvPlatformVersion  = tostring(Fields.AvPlatformVersion);
+
+// 2. Devices missing 2+ patches
+let PatchGaps = DeviceTvmSoftwareVulnerabilities
+| where DeviceName startswith "LAPTOP-"
+| where OSPlatform == "Windows11" and SoftwareName == "windows_11"
+| where isnotempty(RecommendedSecurityUpdate)
+| summarize
+    MissingPatchCount = dcount(RecommendedSecurityUpdate),
+    MissingKBs        = make_set(RecommendedSecurityUpdate)
+    by DeviceId, DeviceName
+| where MissingPatchCount >= 2;
+
+// 3. Join everything
+PatchGaps
+| join kind=inner (
+    DeviceNetworkInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, IPAddresses, LastSeen = Timestamp
+) on DeviceId
+| join kind=inner (
+    DeviceInfo
+    | summarize arg_max(Timestamp, *) by DeviceId
+    | project DeviceId, LoggedOnUsers, OSVersion, OnboardingStatus, SensorHealthState
+) on DeviceId
+| join kind=leftouter AvStatus on DeviceId
+| project
+    DeviceName,
+    DeviceId,
+    MissingPatchCount,
+    MissingKBs,
+    IPAddresses,
+    LoggedOnUsers,
+    LastSeen,
+    DaysSinceSeen      = datetime_diff('day', now(), LastSeen),
+    SensorHealthState,
+    OnboardingStatus,
+    AvEngineVersion,
+    AvSignatureVersion,
+    OSVersion
+| sort by MissingPatchCount desc

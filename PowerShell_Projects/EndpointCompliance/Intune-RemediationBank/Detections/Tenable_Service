@@ -1,7 +1,0 @@
-$AgentStatus = (Get-Service "Tenable Nessus Agent" -ErrorAction SilentlyContinue | Where-Object {$_.Status -eq 'Running'})
-
-if ($AgentStatus) {
-    Exit 0
-} Else { 
-    Exit 1
-}#

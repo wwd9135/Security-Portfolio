@@ -1,0 +1,33 @@
+# Credentials and secrets
+*.key
+*.pem
+*.pfx
+*.p12
+secrets.ps1
+secrets.json
+*_secrets.*
+*.credential
+
+# Local config overrides
+config.local.ps1
+config.local.json
+*.local.psm1
+
+# Logs and temp output
+*.log
+*.tmp
+*.bak
+output/
+results/
+
+# OS noise
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# PSScriptAnalyzer output
+*.pssa

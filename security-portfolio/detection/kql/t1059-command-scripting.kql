@@ -1,0 +1,13 @@
+// ============================================================
+// T1059 — Command and Scripting Interpreter (MITRE ATT&CK)
+// Platform: Microsoft Defender for Endpoint
+// ATR test: Atomic Red Team T1059 simulation (AutoIt3 via PowerShell)
+// ============================================================
+
+// Detects AutoIt3 spawned by PowerShell — common ATR T1059 test artefact.
+// In production, tune InitiatingProcessFileName to match observed parent chains.
+DeviceProcessEvents
+| where FileName == "AutoIt3.exe"
+| where InitiatingProcessFileName == "powershell.exe"
+| project TimeGenerated, DeviceName, FileName, ProcessCommandLine,
+          InitiatingProcessFileName, InitiatingProcessCommandLine
