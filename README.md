@@ -12,6 +12,7 @@ Security-Portfolio/
 ├── Mini_Projects/               # Python utilities: networking, file analysis, input validation, testing
 ├── SC200-AzTenant-ATRsims/      # Azure tenant attack simulation scenarios
 └── security-portfolio/          # PowerShell scripts, KQL queries, and placement resources
+└── Unveil/                      # Stegonography program, using custom encryption algortihim I developed
 ```
 
 ---
