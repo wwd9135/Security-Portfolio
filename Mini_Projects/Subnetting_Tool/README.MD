@@ -1,20 +1,44 @@
-# Network Subnetting tool## Overview
-A subnetting tool for IPv4,
-To ensure deterministic behaviour and minimise configuration errors, this tool allocates subnets sequentially within a fixed private IPv4 block. Future versions may support arbitrary base networks.
+# IPv4 Subnetting Tool
 
-The output's are logged to a dedicated file: Main.log, ensuring errorsS saved.
+A command-line utility for calculating IPv4 subnet allocations from named department/host-count pairs. Given a list of names and required host counts, the tool allocates subnets sequentially within `192.168.0.0/16`, rounding each block up to the nearest valid host count. Outputs network address, broadcast address, usable host range, and subnet mask per allocation.
 
-## How to use
-Request help using __main__.py -h
+## Project Structure
 
-Input:
-__main__.py Marketing: 55 Consultancy: 44 IT: 21 -v 1
+```
+Subnetting_Tool/
+├── src/
+│   ├── _main_.py          # Entry point
+│   └── Modules/
+│       ├── Subnet.py      # Subnet sizing and IP addressing logic
+│       └── cli.py         # Argument parsing and input validation
+└── Tests/
+    └── Main_test.py
+```
 
-## Constraints & Future improvements
-### How do I let users enter arbitrary networks?
-Short answer: I don’t — at least not yet.
-Allowing completely arbitrary network input would explode into an endless parade of edge cases, validation quirks, and subtle bugs. For an early‑stage tool, that’s a recipe for instability rather than usefulness.
-A far better approach is to build a focused, reliable core first, then introduce advanced capabilities incrementally. Free‑form network entry simply isn’t a priority for version one. Supporting it safely would require automated testing across every private‑range IP, and that level of complexity doesn’t belong in a month‑one release.
+## Usage
 
-### IPv6 Functionality
-IPv6 support should be straightforward to add later, but it isn’t a priority until I’ve taken the time to properly understand IPv6 itself. Implementing it now would mean pulling in additional IPv6‑specific modules, expanding the input surface, or even splitting the tool into separate versions — all of which would overcomplicate what is meant to remain a simple, focused project at this stage.
+Run from the `Subnetting_Tool/src/` directory:
+
+```
+python _main_.py Marketing:55/IT:21/HR:90
+```
+
+Input format: `Name:HostCount` pairs separated by `/`. Host counts are automatically rounded up to the nearest valid subnet size.
+
+**Example output:**
+```
+-------------------------
+Subnet: Marketing
+-------------------------
+Total Host Count: 62
+Network address:  192.168.0.1
+Broadcast address: 192.168.0.64
+Last usable host: 192.168.0.63
+Subnet mask: 255.255.0.0
+```
+
+Execution events and input validation errors are written to `main.log`.
+
+## Constraints
+
+Subnet allocation is fixed to the `192.168.0.0/16` private block. Input is validated against the pattern `Name:Count` — arbitrary network entry is not supported in this version.

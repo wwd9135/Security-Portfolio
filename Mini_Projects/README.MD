@@ -1,24 +1,58 @@
-# Lab-Environment: Scripting & Logic Exercises
+# Mini Projects
 
-This repository serves as a personal laboratory for practicing core programming concepts and system logic. These scripts are **Learning Exercises** and are not intended for production environments.
+A collection of focused Python utilities covering input validation, file analysis, network fundamentals, and testing. Each project is self-contained with its own CLI interface and structured source layout.
 
-## Project Purpose
-The focus here is on "Minimum Viable Logic." I created these to strengthen my understanding of specific fundamentals without the overhead of enterprise frameworks.
+---
 
-**Key areas of practice include:**
-* **Logic Flow:** Testing conditional statements and looping structures.
-* **Problem Solving:** Breaking down manual tasks into automated steps.
-* **Syntax Familiarity:** Getting "hands-on" with language-specific quirks.
+## Projects
 
-## Disclaimer: Non-Production Code
-* **Status:** Experimental / In-Progress.
-* **Architecture:** Intentionally minimal. Scalability and complex error handling have been deprioritized to focus on the core algorithm.
-* **Security:** These scripts have not been hardened for security best practices and should only be run in isolated test environments.
+### Password Validator — `CLI_tool.py`
 
-## Featured Exercises
-* **Task Automation:** Simple scripts to handle file I/O and directory management.
-* **Data Parsing:** Basic string manipulation and regex testing.
-* **System Queries:** Pulling basic WMI/CIM information from local endpoints.
+A command-line input validation script demonstrating sanitisation and security policy enforcement on password input. Validates length (8–20 characters) and character composition (minimum two character types) via `argparse` before accepting input.
 
-## Learning Roadmap
-The goal of this repository is to track my transition from basic procedural scripting to more advanced, modular, and "security-first" development. Once a concept is mastered here, it is usually refactored and moved into a dedicated, production-ready repository.
+```
+python CLI_tool.py <password>
+python CLI_tool.py <password> -v 1
+```
+
+---
+
+### File Analyser — `Fileanalyzer/`
+
+Scans a `.txt` file for sensitive patterns — email addresses, phone numbers, and error-level log entries — using compiled regex. Outputs a line count and a list of flagged lines, with verbosity control via `-v`.
+
+```
+python src/main.py <filename>.txt -v 1
+```
+
+---
+
+### IPv4 Subnetting Tool — `Subnetting_Tool/`
+
+Calculates subnet allocations from named department/host-count pairs. Allocates sequentially within `192.168.0.0/16`, rounding each block up to the nearest valid host count. Outputs network address, broadcast address, usable host range, and subnet mask per allocation.
+
+```
+python src/_main_.py Marketing:55/IT:21/HR:90
+```
+
+---
+
+### Pytest Practice — `PyTestPractice/`
+
+Demonstrates pytest fundamentals — fixtures, test class organisation, and assertion patterns — against a small arithmetic module.
+
+```
+pytest test/
+```
+
+---
+
+### Windows Event Log Parser v1 — `LogParser/`
+
+An earlier iteration of the Windows Event Log parser. Demonstrates the initial progression from a single-file script to a modular CLI tool with decoupled parser and CLI modules. The full-featured version lives at the repository root.
+
+```
+python __main__.py -v 0
+```
+
+---

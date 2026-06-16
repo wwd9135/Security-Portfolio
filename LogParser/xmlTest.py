@@ -39,7 +39,7 @@ def test_xml_logic_suite():
     # --- Test Case 4: Robustness (MalformedEdgeCase.xml) ---
     print("Test 4: Edge Case & Malformed Handling...")
     parser = LogParser()
-    res4 = parser.parse("Tests/MalformedEdgeCase.xml")
+    res4 = parser.parse("src/Tests/MalformedEdgeCase.xml")
     # Test high-precision timestamp parsing doesn't crash
     assert res4["summary"]["total"] == 2
     # Test empty <Data/> tag normalization

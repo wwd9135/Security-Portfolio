@@ -40,7 +40,7 @@ class LogParser:
 
             # Data Normalization
             msg_element = event.find(".//ev:Data", self.ns)
-            msg = msg_element.text if msg_element is not None else "N/A"
+            msg = (msg_element.text or "N/A") if msg_element is not None else "N/A"
 
             record = EventRecord(event_id=event_id, timestamp=ts_str, message=msg)
             self.records.append(asdict(record))
