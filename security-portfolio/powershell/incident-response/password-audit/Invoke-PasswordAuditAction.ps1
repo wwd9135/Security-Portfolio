@@ -1,122 +1,147 @@
 <#
 .SYNOPSIS
-    Password audit action — force password change for flagged AD accounts.
+    Forces "User must change password at next logon" for a list of AD accounts,
+    then writes a CSV report recording the outcome for every account.
 
 .DESCRIPTION
-    Reads a list of SamAccountNames from a CSV (produced by Invoke-PasswordAuditPrereqs.ps1
-    or exported from the SIEM), cross-references Active Directory, and sets
-    ChangePasswordAtLogon on all accounts whose password was last set on or before
-    the audit date.
+    Reads SamAccountNames from a text file (one per line) and, for each one:
+      1. Confirms the account exists in Active Directory.
+      2. Skips it if its password was changed AFTER the audit cutoff date.
+      3. Otherwise sets ChangePasswordAtLogon = $true.
+    A live status is printed to the console (the "CLI feed"), and a single CSV
+    report is produced with a Status of Succeeded / Failed / Skipped / NotFound
+    (or WhatIf during a dry run) plus a reason for every input account.
 
-    Accounts not found in AD are recorded as removed/deleted.
-    Failed updates are collected and reported at the end.
+.PARAMETER InputFile
+    Path to a text file containing one SamAccountName per line.
 
-.PARAMETER UserListFile
-    Path to a CSV or text file containing one SamAccountName per line.
-    Default: .\data.csv
+.PARAMETER ReportPath
+    Path for the output CSV results report.
 
 .PARAMETER AuditDate
-    Only accounts whose PasswordLastSet is on or before this date are actioned.
-    Accepts any datetime string. Default: yesterday (run date minus 1 day).
-
-.PARAMETER OutputPath
-    Directory for the ChangedAccounts.csv output file.
-    Default: .\
-
-.NOTES
-    Requires: RSAT ActiveDirectory module
-    Run as: Account with permission to set ChangePasswordAtLogon
+    Cutoff date. Accounts whose PasswordLastSet is AFTER this date are skipped
+    (i.e. they already changed their password since the audit, so leave them alone).
+    
 
 .EXAMPLE
-    .\Invoke-PasswordAuditAction.ps1 -UserListFile .\flagged-users.csv -AuditDate "2025-10-01"
+    # Dry run - shows what WOULD happen, changes nothing
+    .\Set-ChangePwdAtLogon.ps1 -InputFile .\AccountsToChange.txt -ReportPath .\results.csv -WhatIf
 
 .EXAMPLE
-    .\Invoke-PasswordAuditAction.ps1
-    Uses defaults: data.csv, yesterday as audit cutoff, output to current directory.
+    # Real run
+    .\Set-ChangePwdAtLogon.ps1 -InputFile "C:\Scripts\Password_audit\cmpd1\AccountsToChange.txt" `
+                               -ReportPath "C:\Scripts\Password_audit\cmpd1\results.csv" `
+                               -AuditDate '2026-05-01'
 #>
 
 [CmdletBinding(SupportsShouldProcess)]
-param (
-    [Parameter(Mandatory = $false)]
-    [string]$UserListFile = '.\data.csv',
+param(
+    [Parameter(Mandatory)]
+    [string]$InputFile,
 
-    [Parameter(Mandatory = $false)]
-    [datetime]$AuditDate = (Get-Date).AddDays(-1),
+    [Parameter(Mandatory)]
+    [string]$ReportPath,
 
-    [Parameter(Mandatory = $false)]
-    [string]$OutputPath = '.\'
+    [datetime]$AuditDate = '2026-05-01' # CHANGE THIS IF NEED BE.
 )
 
-if (-not (Get-Module -ListAvailable -Name ActiveDirectory)) {
-    Write-Host '[!] RSAT Active Directory module required.' -ForegroundColor Red
-    exit 1
-}
-
+# --- Setup ---------------------------------------------------------------
 Import-Module ActiveDirectory -ErrorAction Stop
 
-if (-not (Test-Path $UserListFile)) {
-    Write-Host "[!] User list file not found: $UserListFile" -ForegroundColor Red
-    exit 1
+if (-not (Test-Path -LiteralPath $InputFile)) {
+    throw "Input file not found: $InputFile"
 }
 
-Write-Host "[*] Reading user list from: $UserListFile" -ForegroundColor Cyan
-Write-Host "[*] Audit date cutoff: $($AuditDate.ToString('yyyy-MM-dd'))" -ForegroundColor Cyan
+# Read names, trim whitespace, drop blank lines and duplicates
+$usernames = Get-Content -LiteralPath $InputFile |
+    ForEach-Object { $_.Trim() } |
+    Where-Object   { $_ -ne '' } |
+    Select-Object  -Unique
 
-$usernames = Get-Content -Path $UserListFile
-
-$removed = @()
-$change  = @()
-
-foreach ($username in $usernames) {
-    $username = $username.Trim()
-    if ([string]::IsNullOrWhiteSpace($username)) { continue }
-
-    $u = Get-ADUser -Filter { SamAccountName -eq $username } -ErrorAction SilentlyContinue
-    if ($null -eq $u) {
-        $removed += $username
-    }
-    else {
-        $change += $username
-    }
+if (-not $usernames) {
+    throw "No usernames found in $InputFile"
 }
 
-Write-Host "[*] Found in AD: $($change.Count) | Not found (removed): $($removed.Count)" -ForegroundColor Cyan
+Write-Host "Loaded $($usernames.Count) username(s) from $InputFile" -ForegroundColor Cyan
+Write-Host ("Audit cutoff: {0:yyyy-MM-dd} (passwords changed AFTER this are skipped)`n" -f $AuditDate) -ForegroundColor Cyan
 
-$UsersToChange = $change | ForEach-Object {
-    Get-ADUser -Identity $_ -Properties DisplayName, PasswordLastSet, PasswordNeverExpires |
-        Where-Object { $_.PasswordLastSet -le $AuditDate }
-} | Sort-Object DisplayName
+# One result object is collected for EVERY input name, whatever the outcome
+$results = [System.Collections.Generic.List[object]]::new()
 
-Write-Host '[*] Accounts to action (PasswordLastSet on or before audit date):'
-$UsersToChange | Select-Object DisplayName, PasswordLastSet, PasswordNeverExpires | Format-Table -AutoSize
+# --- Main loop (single AD pass per user) ---------------------------------
+foreach ($name in $usernames) {
 
-$outputFile = Join-Path $OutputPath 'ChangedAccounts.csv'
-$UsersToChange | Export-Csv -Path $outputFile -NoTypeInformation
-Write-Host "[+] Account list exported: $outputFile" -ForegroundColor White
+    # 1. Does the account exist?
+    $user = Get-ADUser -Filter "SamAccountName -eq '$name'" `
+                       -Properties DisplayName, PasswordLastSet, PasswordNeverExpires `
+                       -ErrorAction SilentlyContinue
 
-$failed = @()
-foreach ($user in $UsersToChange) {
-    if ($PSCmdlet.ShouldProcess($user.SamAccountName, 'Set ChangePasswordAtLogon')) {
-        try {
+    if (-not $user) {
+        Write-Host "NOT FOUND : $name" -ForegroundColor DarkYellow
+        $results.Add([pscustomobject]@{
+            SamAccountName       = $name
+            DisplayName          = ''
+            PasswordLastSet      = ''
+            PasswordNeverExpires = ''
+            Status               = 'NotFound'
+            Detail               = 'No matching AD account'
+        })
+        continue
+    }
+
+    # 2. Password changed since the audit? -> skip (leave them alone)
+    if ($null -ne $user.PasswordLastSet -and $user.PasswordLastSet -gt $AuditDate) {
+        Write-Host "SKIPPED   : $($user.SamAccountName) (password set $($user.PasswordLastSet))" -ForegroundColor Gray
+        $results.Add([pscustomobject]@{
+            SamAccountName       = $user.SamAccountName
+            DisplayName          = $user.DisplayName
+            PasswordLastSet      = $user.PasswordLastSet
+            PasswordNeverExpires = $user.PasswordNeverExpires
+            Status               = 'Skipped'
+            Detail               = 'Password changed after audit date'
+        })
+        continue
+    }
+
+    # 3. Apply the remediation
+    $status = $null
+    $detail = ''
+    try {
+        if ($PSCmdlet.ShouldProcess($user.SamAccountName, 'Set ChangePasswordAtLogon = $true')) {
             Set-ADUser -Identity $user -ChangePasswordAtLogon $true -ErrorAction Stop
-            Write-Host "Updated: $($user.SamAccountName)" -ForegroundColor Green
+            Write-Host "SUCCEEDED : $($user.SamAccountName)" -ForegroundColor Green
+            $status = 'Succeeded'
         }
-        catch {
-            $failed += $user.SamAccountName
-            Write-Host "FAILED: $($user.SamAccountName) — $($_.Exception.Message)" -ForegroundColor Red
+        else {
+            # -WhatIf was supplied
+            Write-Host "WHATIF    : $($user.SamAccountName) (no change made)" -ForegroundColor DarkCyan
+            $status = 'WhatIf'
+            $detail = 'Dry run - no change made'
         }
     }
+    catch {
+        Write-Host "FAILED    : $($user.SamAccountName) - $($_.Exception.Message)" -ForegroundColor Red
+        $status = 'Failed'
+        $detail = $_.Exception.Message
+    }
+
+    $results.Add([pscustomobject]@{
+        SamAccountName       = $user.SamAccountName
+        DisplayName          = $user.DisplayName
+        PasswordLastSet      = $user.PasswordLastSet
+        PasswordNeverExpires = $user.PasswordNeverExpires
+        Status               = $status
+        Detail               = $detail
+    })
 }
 
-if ($removed.Count -gt 0) {
-    Write-Output "`nAccounts not found in AD (may have been removed):"
-    $removed | ForEach-Object { Write-Output "  $_" }
-}
+# --- Report --------------------------------------------------------------
+$results | Sort-Object Status, DisplayName |
+    Export-Csv -LiteralPath $ReportPath -NoTypeInformation -Encoding UTF8
 
-if ($failed.Count -gt 0) {
-    Write-Warning "Failed to update $($failed.Count) account(s) — investigate: $($failed -join ', ')"
-    exit 1
+Write-Host "`n================ SUMMARY ================" -ForegroundColor Cyan
+$results | Group-Object Status | Sort-Object Name | ForEach-Object {
+    Write-Host ("  {0,-10} : {1}" -f $_.Name, $_.Count)
 }
-
-Write-Host '[+] Password audit action complete.' -ForegroundColor Green
-exit 0
+Write-Host ("  {0,-10} : {1}" -f 'TOTAL', $results.Count)
+Write-Host "Report written to: $ReportPath" -ForegroundColor Cyan
